@@ -1,0 +1,259 @@
+name: Build MAALEM ONE APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Setup Android
+        uses: android-actions/setup-android@v3
+
+      - name: Create Android project
+        run: |
+          mkdir -p app/src/main/java/com/maalemone/app
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "MAALEM_ONE"
+          include ':app'
+          EOF
+
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.7.3' apply false
+          }
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.maalemone.app'
+              compileSdk 35
+
+              defaultConfig {
+                  applicationId 'com.maalemone.app'
+                  minSdk 24
+                  targetSdk 35
+                  versionCode 1
+                  versionName '1.0'
+              }
+          }
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
+                  android:label="MAALEM ONE"
+                  android:supportsRtl="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/maalemone/app/MainActivity.java <<'EOF'
+          package com.maalemone.app;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.graphics.Color;
+          import android.view.Gravity;
+          import android.widget.*;
+          import android.text.InputType;
+
+          public class MainActivity extends Activity {
+              LinearLayout layout;
+              int navy = Color.rgb(16,27,53);
+              int blue = Color.rgb(66,99,235);
+
+              public void onCreate(Bundle b) {
+                  super.onCreate(b);
+                  home();
+              }
+
+              TextView text(String s, int size) {
+                  TextView t = new TextView(this);
+                  t.setText(s);
+                  t.setTextSize(size);
+                  t.setTextColor(navy);
+                  t.setGravity(Gravity.CENTER);
+                  t.setPadding(12,16,12,16);
+                  return t;
+              }
+
+              void start(String title) {
+                  layout = new LinearLayout(this);
+                  layout.setOrientation(1);
+                  layout.setPadding(20,25,20,20);
+                  layout.setBackgroundColor(Color.rgb(243,246,252));
+                  TextView head = text(title,24);
+                  head.setTextColor(Color.WHITE);
+                  head.setBackgroundColor(navy);
+                  layout.addView(head);
+                  setContentView(layout);
+              }
+
+              void btn(String label, Runnable action) {
+                  Button b = new Button(this);
+                  b.setText(label);
+                  b.setTextColor(Color.WHITE);
+                  b.setBackgroundTintList(
+                      android.content.res.ColorStateList.valueOf(blue));
+                  layout.addView(b);
+                  b.setOnClickListener(v -> action.run());
+              }
+
+              void home() {
+                  start("MAALEM ONE");
+                  layout.addView(text("مدرسك الشخصي في الرياضيات",20));
+                  layout.addView(text(
+                      "نتعلمو بشوية بشوية، حتى تفهم كل درس.",17));
+                  btn("الدروس", () -> lessons());
+                  btn("آلة الحساب", () -> calculator());
+                  btn("اختبر فهمك", () -> quiz());
+                  layout.addView(text(
+                      "الإصدار الأول - قسم الرياضيات",14));
+              }
+
+              void lessons() {
+                  start("دروس الرياضيات");
+                  String[] names = {
+                      "الجمع والطرح",
+                      "الضرب والقسمة",
+                      "الأعداد السالبة",
+                      "مقدمة في الجبر"
+                  };
+                  String[] explanations = {
+                      "الجمع: 7 + 5 = 12\\nالطرح: 12 - 5 = 7",
+                      "الضرب: 3 × 4 = 12\\nالقسمة: 12 ÷ 3 = 4",
+                      "5 + (-3) = 2",
+                      "x + 3 = 8\\nإذن x = 5"
+                  };
+                  for(int i=0;i<names.length;i++) {
+                      final int n=i;
+                      btn(names[i], () -> new android.app.AlertDialog.Builder(this)
+                          .setTitle(names[n])
+                          .setMessage(explanations[n])
+                          .setPositiveButton("فهمت",null)
+                          .show());
+                  }
+                  btn("الرئيسية", () -> home());
+              }
+
+              void calculator() {
+                  start("آلة الحساب");
+                  EditText a = new EditText(this);
+                  a.setHint("العدد الأول");
+                  a.setInputType(InputType.TYPE_CLASS_NUMBER |
+                      InputType.TYPE_NUMBER_FLAG_SIGNED |
+                      InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                  layout.addView(a);
+
+                  EditText b = new EditText(this);
+                  b.setHint("العدد الثاني");
+                  b.setInputType(InputType.TYPE_CLASS_NUMBER |
+                      InputType.TYPE_NUMBER_FLAG_SIGNED |
+                      InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                  layout.addView(b);
+
+                  TextView result = text("النتيجة ستظهر هنا",20);
+                  layout.addView(result);
+
+                  String[] ops = {"+","-","×","÷"};
+                  for(String op:ops) {
+                      btn(op, () -> {
+                          try {
+                              double x=Double.parseDouble(a.getText().toString());
+                              double y=Double.parseDouble(b.getText().toString());
+                              double r=0;
+                              if(op.equals("+")) r=x+y;
+                              if(op.equals("-")) r=x-y;
+                              if(op.equals("×")) r=x*y;
+                              if(op.equals("÷")) {
+                                  if(y==0) {
+                                      result.setText("لا يمكن القسمة على صفر");
+                                      return;
+                                  }
+                                  r=x/y;
+                              }
+                              result.setText("النتيجة: "+r);
+                          } catch(Exception e) {
+                              result.setText("أدخل العددين أولا");
+                          }
+                      });
+                  }
+                  btn("الرئيسية", () -> home());
+              }
+
+              void quiz() {
+                  start("اختبر فهمك");
+                  layout.addView(text("شحال هي 7 + 5 ؟",22));
+                  EditText answer = new EditText(this);
+                  answer.setHint("كتب الجواب");
+                  answer.setInputType(InputType.TYPE_CLASS_NUMBER);
+                  layout.addView(answer);
+                  btn("صحح الجواب", () -> {
+                      String s=answer.getText().toString().trim();
+                      String msg=s.equals("12")
+                          ? "برافو عليك! الجواب صحيح."
+                          : "حاول مرة أخرى. 7 + 5 = 12";
+                      new android.app.AlertDialog.Builder(this)
+                          .setMessage(msg)
+                          .setPositiveButton("حسنا",null).show();
+                  });
+                  btn("الرئيسية", () -> home());
+              }
+          }
+          EOF
+
+      - name: Build APK
+        run: gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MAALEM-ONE-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
